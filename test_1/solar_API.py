@@ -27,6 +27,9 @@ raw_text = response.text.replace('\n', '').strip()
 # 데이터에서 쉼표(,) 기준으로 숫자 추출
 data_list = raw_text.split(',')
 
+print("처음 100자:", repr(data_list[:100]))
+print("마지막 100자:", repr(data_list[-100:]))
+
 # 불필요한 공백 제거, 숫자형으로 변환 (첫번째 값은 보통 데이터 길이거나 인덱스일 수 있음)
 data_list = [float(x.strip()) for x in data_list[1:] if x.strip() != '']
 
@@ -90,5 +93,5 @@ df = pd.DataFrame({
 })
 
 # 결과 출력
-import ace_tools as tools
-tools.display_dataframe_to_user(name="900x900 Grid Coordinates", dataframe=df)
+#import ace_tools as tools
+#tools.display_dataframe_to_user(name="900x900 Grid Coordinates", dataframe=df)
