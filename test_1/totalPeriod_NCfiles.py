@@ -10,31 +10,28 @@ import netCDF4
 
 
 # NetCDF 파일들이 저장된 폴더 경로
-file_path = "C:/Users/DESKTOP/Desktop/allData/KMA/solarResource_GHI_byHours_byTotalPeriod/KMAPP_solar_FWS_total_mean.nc"
-
-rawData = xr.open_dataset(file_path)
-final_df = rawData["SWDN_flat_with_shading"].to_dataframe().reset_index()
+folder_path = "C:/Users/DESKTOP/Desktop/allData/KMA/solarResource_GHI_byMonth"
 #folder_path = "C:/Users/sidus/Desktop/solarResource_GHI_byMonth"
 # 1월~12월 NetCDF 파일 이름 리스트
-# file_names = [f"KMAPP_solar_FWS_{i:02d}M_mean.nc" for i in range(1, 13)]
+file_names = [f"KMAPP_solar_FWS_{i:02d}M_mean.nc" for i in range(1, 13)]
 
-# # 최종 DataFrame 초기화
-# final_df = None
+# 최종 DataFrame 초기화
+final_df = None
 
-# for month, file_name in enumerate(file_names, start=1):
-#     file_path = os.path.join(folder_path, file_name)
+for month, file_name in enumerate(file_names, start=1):
+    file_path = os.path.join(folder_path, file_name)
 
-#     #rawData = xr.open_dataset(file_path, engine="h5netcdf")
-#     rawData = xr.open_dataset(file_path)
+    #rawData = xr.open_dataset(file_path, engine="h5netcdf")
+    rawData = xr.open_dataset(file_path)
 
-#     irrData = rawData["SWDN_flat_with_shading"].to_dataframe().reset_index()
+    irrData = rawData["SWDN_flat_with_shading"].to_dataframe().reset_index()
 
-#     irrData.rename(columns={"SWDN_flat_with_shading": f"value_{month}"}, inplace=True)
+    irrData.rename(columns={"SWDN_flat_with_shading": f"value_{month}"}, inplace=True)
 
-#     if final_df is None:
-#         final_df = irrData
-#     else:
-#         final_df = final_df.merge(irrData, on=["Y", "X"], how="left")
+    if final_df is None:
+        final_df = irrData
+    else:
+        final_df = final_df.merge(irrData, on=["Y", "X"], how="left")
 
 # 최종 데이터 확인
 print(final_df.head())
@@ -45,9 +42,7 @@ print(final_df.head())
 
 
 # NetCDF 파일 열기
-#rawData_latlon_file_path = "C:/Users/sidus/Desktop/solarResource_GHI_byMonth/KMAP_latlon.nc"
-rawData_latlon_file_path = "C:/Users/DESKTOP/Desktop/allData/KMA/solarResource_GHI_byMonth/appendix/KMAP_latlon.nc"
-
+rawData_latlon_file_path = "C:/Users/sidus/Desktop/solarResource_GHI_byMonth/KMAP_latlon.nc"
 rawData_latlon = xr.open_dataset(rawData_latlon_file_path)
 
 # 데이터셋 구조 확인
@@ -73,34 +68,17 @@ merged_df = pd.concat([df_latlon, final_df], axis=1)
 # 결측값(NaN) 제거
 merged_df_clean = merged_df.dropna()
 
-merged_df_clean = merged_df_clean.copy()  # 명확한 복사본 생성
+# value_1 ~ value_12의 합을 yearTotal 컬럼으로 추가
+merged_df_clean['yearTotal'] = merged_df_clean.loc[:, 'value_1':'value_12'].sum(axis=1)
 
-merged_df_clean['Total'] = merged_df_clean['SWDN_flat_with_shading'] * 8760
 
-# # 각 월의 총 시간 계산 (윤년 고려 X, 일반적인 경우)
-# hours_per_month = [24 * 31, 24 * 28, 24 * 31, 24 * 30, 24 * 31, 24 * 30, 
-#                    24 * 31, 24 * 31, 24 * 30, 24 * 31, 24 * 30, 24 * 31]
-
-# # 기존 value_1 ~ value_12 열 이름 리스트
-# month_cols = [f'value_{i}' for i in range(1, 13)]
-
-# # 새로운 열 추가: monthTotalvalue_1 ~ monthTotalvalue_12
-# for i, col in enumerate(month_cols):
-#     new_col_name = f'monthTotal{col}'
-#     merged_df_clean[new_col_name] = merged_df_clean[col] * hours_per_month[i]
-
-# # monthTotalvalue_1 ~ monthTotalvalue_12의 합을 구하는 새로운 칼럼 추가
-# total_cols = [f'monthTotal{col}' for col in month_cols]
-# merged_df_clean['monthYearTotal'] = merged_df_clean[total_cols].sum(axis=1)
-
-df_selected = merged_df_clean[['latitude', 'longitude', 'Total']]
+df_selected = merged_df_clean[['latitude', 'longitude', 'yearTotal']]
 
 
 
 ########## Shp file SGG  ##########
 # SHP 파일 로드
-#shp_file = "C:/Users/sidus/Desktop/GRI Github/pythonTest/test_1/ctprvn_20230729/ctprvn.shp"  # 실제 파일 경로로 변경하세요
-shp_file = "./ctprvn_20230729/ctprvn.shp"  # 실제 파일 경로로 변경하세요
+shp_file = "C:/Users/sidus/Desktop/GRI Github/pythonTest/test_1/ctprvn_20230729/ctprvn.shp"  # 실제 파일 경로로 변경하세요
 gdf_shp = gpd.read_file(shp_file)
 
 # 좌표계를 EPSG:5179로 수동 설정
@@ -140,7 +118,7 @@ print(gdf_points[['latitude', 'longitude']].describe())
 print(gdf_points.head())  # geometry 컬럼이 있는지 확인
 print(gdf_points.geometry.head())  # Point 객체가 올바르게 생성되었는지 확인
 
-
+import matplotlib.pyplot as plt
 
 ## 지도위에 점을 전부 뿌릴려면 너무 많다.
 #fig, ax = plt.subplots(figsize=(8, 8))
@@ -154,28 +132,20 @@ print(gdf_points.geometry.head())  # Point 객체가 올바르게 생성되었�
 gdf_seoul = gdf_points[(gdf_points["longitude"] > 126) & (gdf_points["longitude"] < 127) &
                         (gdf_points["latitude"] > 37) & (gdf_points["latitude"] < 38)]
 
-# Gyeonggi-do(경기도)만 필터링
-gdf_shp_gyeonggi_region = gdf_shp[gdf_shp["CTP_ENG_NM"] == "Gyeonggi-do"]
-
-# 공간 조인 (포인트가 Gyeonggi-do에 포함되는 것만 선택)
-points_in_gyeonggi = gpd.sjoin(gdf_points, gdf_shp_gyeonggi_region, predicate="within")
-
-
-
 # 샘플링
-sample_points_in_gyeonggi = points_in_gyeonggi.sample(n=3000, random_state=42)
+gdf_sample_seoul = gdf_seoul.sample(n=3000, random_state=42)
 
 # 지도 시각화
 fig, ax = plt.subplots(figsize=(8, 8))
 gdf_shp.plot(ax=ax, color="lightgrey", edgecolor="black")  # 시도 경계
-sample_points_in_gyeonggi.plot(ax=ax, color="blue", markersize=1, alpha=0.5)  # 서울 지역 포인트
+gdf_sample_seoul.plot(ax=ax, color="blue", markersize=1, alpha=0.5)  # 서울 지역 포인트
 plt.show()
 
 
 ### 잠재량 수치 확인
 
-#gdf_filtered['avgbyMonth'] = gdf_filtered['yearTotal'] / 12 * 8760
+gdf_filtered['avgbyMonth'] = gdf_filtered['yearTotal'] / 12 * 8760
 
-irr_total = gdf_filtered['Total'].sum()
+irr_total = gdf_filtered['avgbyMonth'].sum()
 
 irr_total / 10**12 * 10**4
